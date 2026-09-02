@@ -1,0 +1,17 @@
+{
+  "name": "dsh-input-preflight-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A context-aware input preflight MVP for DSH, powered by DeepSeek V4 Flash in non-thinking mode.",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check public/app.js && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

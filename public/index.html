@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DSH context-aware input preflight MVP" />
+    <title>DSH Input Preflight</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">DSH EXPERIMENT / MVP</p>
+          <h1>Input Preflight</h1>
+          <p class="subtitle">检测的不是文笔，而是这段输入是否足以支撑下一步。</p>
+        </div>
+        <div class="model-stack">
+          <span class="badge">deepseek-v4-flash</span>
+          <span class="badge badge-safe">Non-thinking</span>
+          <span id="healthBadge" class="health-badge">检查配置中…</span>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <article class="panel composer-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step">01</span>
+              <h2>自然表达</h2>
+            </div>
+            <span id="charCount" class="muted">0 / 12000</span>
+          </div>
+
+          <label class="field-label" for="draft">输入草稿</label>
+          <textarea
+            id="draft"
+            class="draft-input"
+            maxlength="12000"
+            placeholder="直接像平时一样表达，不必先把自己变成提示词工程师。"
+          ></textarea>
+
+          <div class="inline-grid">
+            <label>
+              <span class="field-label">目标执行器</span>
+              <select id="targetMode">
+                <option value="chat">聊天模型</option>
+                <option value="agent">工具型 Agent</option>
+              </select>
+            </label>
+            <label>
+              <span class="field-label">补充上下文（可选）</span>
+              <textarea
+                id="context"
+                class="context-input"
+                maxlength="8000"
+                placeholder="例如：当前已选中 Issue #12；这次只讨论设计，不修改代码。"
+              ></textarea>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="analyzeButton" class="button button-primary" type="button">
+              <span>检测并最小优化</span>
+              <kbd>Ctrl ↵</kbd>
+            </button>
+            <button id="exampleButton" class="button" type="button">载入示例</button>
+            <button id="clearButton" class="button button-quiet" type="button">清空</button>
+          </div>
+          <p class="privacy-note">API Key 仅存在服务端环境变量中，不会进入浏览器。</p>
+        </article>
+
+        <article id="emptyState" class="panel result-empty">
+          <div class="radar-mark">◎</div>
+          <h2>等待一次预检</h2>
+          <p>结果会拆成当前理解、执行准备度、具体缺口、最小改写和语义守恒检查。</p>
+        </article>
+
+        <article id="loadingState" class="panel result-empty hidden" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <h2>正在检查执行准备度</h2>
+          <p>只诊断和改写，不执行草稿中的任务。</p>
+        </article>
+
+        <article id="errorState" class="panel error-panel hidden" aria-live="assertive">
+          <span class="step">ERROR</span>
+          <h2>预检失败</h2>
+          <p id="errorMessage"></p>
+        </article>
+
+        <article id="resultPanel" class="panel result-panel hidden" aria-live="polite">
+          <div class="result-hero">
+            <div id="scoreRing" class="score-ring"><strong id="scoreValue">0</strong><span>/100</span></div>
+            <div class="result-summary">
+              <div class="result-tags">
+                <span id="decisionTag" class="tag"></span>
+                <span id="intentTag" class="tag tag-neutral"></span>
+                <span id="domainTag" class="tag tag-neutral"></span>
+              </div>
+              <h2 id="understanding"></h2>
+              <p id="resultMeta" class="muted"></p>
+            </div>
+          </div>
+
+          <section class="result-section">
+            <div class="section-title">
+              <span class="step">02</span>
+              <h3>执行准备度</h3>
+            </div>
+            <div id="dimensions" class="dimensions"></div>
+          </section>
+
+          <section class="result-section">
+            <div class="section-title">
+              <span class="step">03</span>
+              <h3>缺口与建议</h3>
+            </div>
+            <div id="issues" class="issue-list"></div>
+            <div id="blockingQuestionBox" class="question-box hidden">
+              <span>唯一阻塞问题</span>
+              <p id="blockingQuestion"></p>
+            </div>
+          </section>
+
+          <section class="result-section">
+            <div class="section-title section-title-spread">
+              <div>
+                <span class="step">04</span>
+                <h3>最小改写</h3>
+              </div>
+              <div class="compact-actions">
+                <button id="copyButton" class="button button-small" type="button">复制</button>
+                <button id="applyButton" class="button button-primary button-small" type="button">采用优化稿</button>
+              </div>
+            </div>
+            <div class="compare-grid">
+              <div class="compare-card">
+                <span class="compare-label">原始输入</span>
+                <pre id="originalText"></pre>
+              </div>
+              <div class="compare-card compare-card-accent">
+                <span class="compare-label">优化输入</span>
+                <pre id="optimizedText"></pre>
+              </div>
+            </div>
+            <div class="diff-card">
+              <span class="compare-label">逐词差异</span>
+              <div id="diffText" class="diff-text"></div>
+            </div>
+          </section>
+
+          <section class="result-section two-column-section">
+            <div>
+              <div class="section-title">
+                <span class="step">05</span>
+                <h3>语义守恒</h3>
+              </div>
+              <div id="preservationChecks" class="checks"></div>
+            </div>
+            <div>
+              <div class="section-title">
+                <span class="step">06</span>
+                <h3>假设分层</h3>
+              </div>
+              <div id="assumptions" class="assumptions"></div>
+            </div>
+          </section>
+        </article>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

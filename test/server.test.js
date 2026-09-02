@@ -97,4 +97,4 @@ test("preflight endpoint returns normalized model output", async () => {
     assert.equal(body.meta.thinking, "disabled");
     assert.equal(body.meta.usage.totalTokens, 180);
   });
-}
+});
